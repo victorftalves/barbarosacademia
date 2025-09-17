@@ -1,0 +1,348 @@
+import React, { useState } from 'react';
+
+// Main App Component
+const App = () => {
+    // State for navigation
+    const [page, setPage] = useState('home');
+
+    // State for the subscription popup
+    const [showPopup, setShowPopup] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState('');
+    const [formData, setFormData] = useState({
+        name: '',
+        cpf: '',
+        phone: '',
+        email: '',
+        dob: '',
+        objective: '',
+        address: ''
+    });
+
+    // Function to handle BMI calculation
+    const [weight, setWeight] = useState('');
+    const [height, setHeight] = useState('');
+    const [bmiResult, setBmiResult] = useState(null);
+
+    const testimonials = [
+        {
+            name: 'Carlos R.',
+            text: 'A Academia Bárbaros mudou minha vida! A equipe é incrível e me ajudou a alcançar meus objetivos de forma segura e divertida. Recomendo muito!'
+        },
+        {
+            name: 'Juliana P.',
+            text: 'O ambiente é sensacional, com equipamentos de última geração e aulas super animadas. Me sinto em casa aqui. O melhor lugar para treinar!'
+        },
+        {
+            name: 'Márcio S.',
+            text: 'Os professores são muito atenciosos e preparam treinos personalizados de verdade. Saio daqui cada dia mais motivado. Parabéns, Bárbaros!'
+        }
+    ];
+
+    const calculateBmi = () => {
+        if (!weight || !height) {
+            setBmiResult('Por favor, insira o peso e a altura.');
+            return;
+        }
+        const w = parseFloat(weight);
+        const h = parseFloat(height) / 100; // Convert cm to m
+        if (isNaN(w) || isNaN(h) || h === 0) {
+            setBmiResult('Valores inválidos.');
+            return;
+        }
+        const bmi = w / (h * h);
+        let category = '';
+        if (bmi < 18.5) category = 'Abaixo do peso';
+        else if (bmi >= 18.5 && bmi < 24.9) category = 'Peso normal';
+        else if (bmi >= 25 && bmi < 29.9) category = 'Sobrepeso';
+        else if (bmi >= 30 && bmi < 34.9) category = 'Obesidade Grau I';
+        else if (bmi >= 35 && bmi < 39.9) category = 'Obesidade Grau II';
+        else category = 'Obesidade Grau III';
+
+        setBmiResult(`Seu IMC é ${bmi.toFixed(2)}. Categoria: ${category}`);
+    };
+
+    // Data for plans
+    const plans = [
+        { name: 'Pacote Bárbaros', price: 'R$ 99,90/mês', benefits: ['Acesso livre na academia'] },
+        { name: 'Pacote Executivo', price: 'R$ 79,90/mês', benefits: ['Acesso das 10h às 16h'] },
+        { name: 'Pacote Família', price: 'R$ 89,90/mês', benefits: ['A partir de 3 pessoas', 'Acesso completo'] }
+    ];
+
+    // Handle form changes
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prevData => ({ ...prevData, [name]: value }));
+    };
+
+    // Handle form submission
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+        const { name, cpf, phone, email, dob, objective, address } = formData;
+
+        // Prepare message for WhatsApp
+        const whatsappMessage = `Olá, gostaria de me matricular no plano *${selectedPlan}*.\n\n` +
+                                `*Dados do cliente:*\n` +
+                                `Nome: ${name}\n` +
+                                `CPF: ${cpf}\n` +
+                                `Telefone: ${phone}\n` +
+                                `E-mail: ${email}\n` +
+                                `Data de Nascimento: ${dob}\n` +
+                                `Objetivo: ${objective}\n` +
+                                `Endereço: ${address}`;
+
+        const encodedMessage = encodeURIComponent(whatsappMessage);
+        const whatsappUrl = `https://wa.me/5591986427170?text=${encodedMessage}`;
+
+        window.open(whatsappUrl, '_blank');
+
+        // Hide popup and reset form
+        setShowPopup(false);
+        setFormData({ name: '', cpf: '', phone: '', email: '', dob: '', objective: '', address: '' });
+    };
+
+    // Page content based on state
+    const renderPage = () => {
+        switch (page) {
+            case 'home':
+                return (
+                    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center pt-20 pb-10 px-4">
+                        <div className="text-center">
+                            <h1 className="text-5xl md:text-7xl font-extrabold title-font text-red-600 mb-4">ACADEMIA BÁRBAROS</h1>
+                            <p className="text-xl md:text-2xl font-medium">A força que te move, o resultado que te transforma.</p>
+                            <button onClick={() => setPage('contact')} className="mt-8 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors">
+                                Fale com a gente
+                            </button>
+                        </div>
+                        {/* Testimonials Section */}
+                        <div className="py-20 px-4 w-full">
+                            <h2 className="text-4xl font-bold text-center text-red-600 mb-12">O que nossos clientes dizem</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {testimonials.map((testimonial, index) => (
+                                    <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg">
+                                        <p className="text-lg italic text-gray-300 mb-4">"{testimonial.text}"</p>
+                                        <p className="font-bold text-right text-white">- {testimonial.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'about':
+                return (
+                    <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
+                        <div className="max-w-4xl mx-auto">
+                            <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Quem Somos</h2>
+                            <p className="text-lg leading-relaxed">
+                                A Academia Bárbaros nasceu da paixão pelo esporte e pela vida saudável. Nossa missão é ser a principal referência em bem-estar e performance em Santa Bárbara do Pará. Com equipamentos de ponta e uma equipe de profissionais altamente qualificados, estamos comprometidos em ajudar você a superar seus limites e alcançar seus objetivos de forma segura e eficaz.
+                            </p>
+                            <div className="mt-8">
+                                <h3 className="text-2xl font-semibold mb-4">Nossa Equipe</h3>
+                                <p>Em breve, fotos e especialidades dos nossos incríveis instrutores.</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'services':
+                return (
+                    <div className="min-h-screen bg-black text-white py-20 px-4">
+                        <div className="max-w-4xl mx-auto">
+                            <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Serviços e Modalidades</h2>
+                            <p className="text-lg leading-relaxed">
+                                Oferecemos uma ampla gama de serviços para atender a todas as suas necessidades de treino. De musculação a aulas de dança, encontre a modalidade perfeita para o seu ritmo.
+                            </p>
+                            <ul className="mt-6 space-y-4">
+                                <li>- Musculação</li>
+                                <li>- Treino Funcional</li>
+                                <li>- Aulas de Dança</li>
+                                <li>- Boxe e Artes Marciais</li>
+                                <li>- Yoga e alongamento</li>
+                            </ul>
+                        </div>
+                    </div>
+                );
+            case 'plans':
+                return (
+                    <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
+                        <div className="max-w-4xl mx-auto">
+                            <h2 className="text-4xl font-bold title-font text-red-600 mb-6 text-center">Conheça nossos Pacotes</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+                                {plans.map((plan, index) => (
+                                    <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105">
+                                        <h3 className="text-2xl font-bold title-font mb-2">{plan.name}</h3>
+                                        <p className="text-3xl font-extrabold text-red-500 mb-4">{plan.price}</p>
+                                        <ul className="text-sm space-y-2">
+                                            {plan.benefits.map((benefit, i) => (
+                                                <li key={i} className="flex items-center">
+                                                    <svg className="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                                                    {benefit}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <button onClick={() => {
+                                            setSelectedPlan(plan.name);
+                                            setShowPopup(true);
+                                        }} className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full transition-colors">
+                                            Assinar
+                                        </button>
+                                    </div>
+                                ))}
+                                <div className="bg-red-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 col-span-1 md:col-span-3 lg:col-span-1 md:mx-auto">
+                                    <h3 className="text-2xl font-bold title-font mb-2 text-center">Faça a Avaliação</h3>
+                                    <p className="text-3xl font-extrabold text-white mb-4 text-center">R$ 29,90</p>
+                                    <p className="text-center font-semibold mb-4">Agende já!</p>
+                                    <button onClick={() => setPage('contact')} className="w-full bg-white text-red-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors">
+                                        Agendar Avaliação
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'bmi':
+                return (
+                    <div className="min-h-screen bg-black text-white py-20 px-4">
+                        <div className="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
+                            <h2 className="text-4xl font-bold title-font text-center text-red-600 mb-6">Calculadora de IMC</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="weight" className="block text-sm font-medium mb-1">Peso (kg)</label>
+                                    <input
+                                        id="weight"
+                                        type="number"
+                                        value={weight}
+                                        onChange={(e) => setWeight(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="height" className="block text-sm font-medium mb-1">Altura (cm)</label>
+                                    <input
+                                        id="height"
+                                        type="number"
+                                        value={height}
+                                        onChange={(e) => setHeight(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
+                                </div>
+                                <button onClick={calculateBmi} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">
+                                    Calcular IMC
+                                </button>
+                                {bmiResult && (
+                                    <div className="mt-4 p-4 text-center rounded-md bg-gray-700">
+                                        <p className="text-lg font-bold">{bmiResult}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'contact':
+                return (
+                    <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Contato</h2>
+                            <p className="text-lg">Fale com a gente e comece sua jornada fitness!</p>
+                            <div className="mt-8 space-y-4">
+                                <p className="text-xl font-semibold">Telefone: (91) 98642-7170</p>
+                                <p className="text-lg">Endereço: Av. Antônio Lisboa de Silva, Santa Bárbara do Pará</p>
+                                <a href="https://wa.me/5591986427170" target="_blank" rel="noopener noreferrer" className="inline-block mt-4 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors">
+                                    WhatsApp
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="font-sans bg-black">
+            {/* Header */}
+            <header className="fixed top-0 left-0 w-full z-50 bg-black/70 backdrop-blur-sm">
+                <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                        {/* Logo Placeholder */}
+                        <img src="https://placehold.co/150x50/F80000/FFFFFF?text=Logo+Academia" alt="Logo da Academia Bárbaros" className="h-10 w-auto"/>
+                    </div>
+                    <div className="flex items-center">
+                        <div className="hidden md:flex space-x-8 text-sm">
+                            <button onClick={() => setPage('home')} className="text-white hover:text-red-500 transition-colors">Home</button>
+                            <button onClick={() => setPage('about')} className="text-white hover:text-red-500 transition-colors">Quem Somos</button>
+                            <button onClick={() => setPage('services')} className="text-white hover:text-red-500 transition-colors">Serviços</button>
+                            <button onClick={() => setPage('plans')} className="text-white hover:text-red-500 transition-colors">Planos</button>
+                            <button onClick={() => setPage('bmi')} className="text-white hover:text-red-500 transition-colors">IMC</button>
+                            <button onClick={() => setPage('contact')} className="text-white hover:text-red-500 transition-colors">Contato</button>
+                        </div>
+                        <button className="text-white md:hidden">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                        </button>
+                    </div>
+                </nav>
+            </header>
+
+            {/* Page Content */}
+            {renderPage()}
+
+            {/* Subscription Popup */}
+            {showPopup && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+                    <div className="bg-gray-900 rounded-lg p-8 max-w-lg w-full shadow-lg relative">
+                        <button onClick={() => setShowPopup(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-200 transition-colors">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                        <h2 className="text-3xl font-bold title-font text-center text-red-600 mb-6">Matricule-se Agora</h2>
+                        <p className="text-center text-gray-400 mb-6">Você está assinando o plano: <span className="text-white font-bold">{selectedPlan}</span></p>
+                        <form onSubmit={handleFormSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Nome Completo</label>
+                                <input type="text" name="name" value={formData.name} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">CPF</label>
+                                <input type="text" name="cpf" value={formData.cpf} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Telefone</label>
+                                <input type="tel" name="phone" value={formData.phone} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">E-mail</label>
+                                <input type="email" name="email" value={formData.email} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Data de Nascimento</label>
+                                <input type="date" name="dob" value={formData.dob} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Objetivo Fitness</label>
+                                <textarea name="objective" value={formData.objective} onChange={handleFormChange} required rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Endereço Completo</label>
+                                <textarea name="address" value={formData.address} onChange={handleFormChange} required rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
+                            </div>
+                            <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">
+                                Enviar para o WhatsApp
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Footer */}
+            <footer className="bg-gray-800 text-gray-400 py-8 px-4 text-center">
+                <div className="max-w-7xl mx-auto">
+                    {/* Logo Placeholder */}
+                    <img src="https://placehold.co/100x30/F80000/FFFFFF?text=Logo" alt="Logo da Academia Bárbaros" className="mx-auto h-8 mb-4"/>
+                    <p>Academia Bárbaros - Todos os direitos reservados.</p>
+                    <p className="mt-2">Endereço: Av. Antônio Lisboa de Silva, Santa Bárbara do Pará</p>
+                    <p>Telefone: (91) 98642-7170</p>
+                </div>
+            </footer>
+        </div>
+    );
+};
+
+export default App;
