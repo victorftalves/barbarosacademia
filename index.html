@@ -8,13 +8,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React, ReactDOM, and Babel for JSX compilation -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
+            /* Textura de fundo adicionada */
+            background-color: #1a1a1a;
+            background-image: radial-gradient(#333333 1px, transparent 1px);
+            background-size: 20px 20px;
         }
         .hero-video {
             position: absolute;
@@ -27,16 +31,9 @@
             z-index: -1;
             object-fit: cover;
         }
-        .textured-bg {
-            background-image: url('https://placehold.co/1920x1080/000000/222222?text=Stone+Texture');
-            background-size: cover;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
     </style>
 </head>
-<body class="bg-black text-white">
+<body class="text-white">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -44,7 +41,7 @@
         const App = () => {
             // State for navigation
             const [page, setPage] = React.useState('home');
-            const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+            const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
             // State for the subscription popup
             const [showPopup, setShowPopup] = React.useState(false);
@@ -59,16 +56,7 @@
                 address: ''
             });
 
-            // State for the contact form popup
-            const [showContactPopup, setShowContactPopup] = React.useState(false);
-            const [contactFormData, setContactFormData] = React.useState({
-                name: '',
-                phone: '',
-                email: '',
-                message: ''
-            });
-
-            // State for BMI calculation
+            // Function to handle BMI calculation
             const [weight, setWeight] = React.useState('');
             const [height, setHeight] = React.useState('');
             const [bmiResult, setBmiResult] = React.useState(null);
@@ -118,22 +106,23 @@
                 { name: 'Pacote Família', price: 'R$ 89,90/mês', benefits: ['A partir de 3 pessoas', 'Acesso completo'] }
             ];
 
-            // Handle form changes for subscription popup
+            // Handle form changes
             const handleFormChange = (e) => {
                 const { name, value } = e.target;
                 setFormData(prevData => ({ ...prevData, [name]: value }));
             };
 
-            // Handle form changes for contact popup
-            const handleContactFormChange = (e) => {
-                const { name, value } = e.target;
-                setContactFormData(prevData => ({ ...prevData, [name]: value }));
-            };
-
-            // Handle subscription form submission
+            // Handle form submission
             const handleFormSubmit = (e) => {
                 e.preventDefault();
+                // Check if all required fields are filled
+                if (!formData.name || !formData.cpf || !formData.phone || !formData.email || !formData.dob || !formData.objective || !formData.address) {
+                    alert('Por favor, preencha todos os campos obrigatórios.');
+                    return;
+                }
                 const { name, cpf, phone, email, dob, objective, address } = formData;
+
+                // Prepare message for WhatsApp
                 const whatsappMessage = `Olá, gostaria de me matricular no plano *${selectedPlan}*.\n\n` +
                                         `*Dados do cliente:*\n` +
                                         `Nome: ${name}\n` +
@@ -146,31 +135,12 @@
 
                 const encodedMessage = encodeURIComponent(whatsappMessage);
                 const whatsappUrl = `https://wa.me/5591986427170?text=${encodedMessage}`;
+
                 window.open(whatsappUrl, '_blank');
+
+                // Hide popup and reset form
                 setShowPopup(false);
                 setFormData({ name: '', cpf: '', phone: '', email: '', dob: '', objective: '', address: '' });
-            };
-
-            // Handle contact form submission
-            const handleContactFormSubmit = (e) => {
-                e.preventDefault();
-                const { name, phone, email, message } = contactFormData;
-                const whatsappMessage = `Olá, gostaria de agendar uma avaliação gratuita.\n\n` +
-                                        `*Dados do cliente:*\n` +
-                                        `Nome: ${name}\n` +
-                                        `Telefone: ${phone}\n` +
-                                        `E-mail: ${email}\n` +
-                                        `Mensagem: ${message}`;
-
-                const encodedMessage = encodeURIComponent(whatsappMessage);
-                const whatsappUrl = `https://wa.me/5591986427170?text=${encodedMessage}`;
-                window.open(whatsappUrl, '_blank');
-                setShowContactPopup(false);
-                setContactFormData({ name: '', phone: '', email: '', message: '' });
-            };
-
-            const toggleMobileMenu = () => {
-                setIsMobileMenuOpen(!isMobileMenuOpen);
             };
 
             // Page content based on state
@@ -178,7 +148,7 @@
                 switch (page) {
                     case 'home':
                         return (
-                            <div className="bg-black text-white">
+                            <div>
                                 {/* Hero Section with Video Background */}
                                 <div className="relative h-screen flex flex-col items-center justify-center text-center overflow-hidden">
                                     <video autoPlay loop muted playsInline className="hero-video">
@@ -194,36 +164,36 @@
                                         <p className="text-xl md:text-2xl font-medium text-red-600 mb-8">
                                             QUEM É BÁRBAROS, SABE.
                                         </p>
-                                        <button onClick={() => setPage('plans')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">
+                                        <button onClick={() => setPage('plans')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all duration-300 shadow-lg transform hover:scale-110">
                                             MATRICULE-SE AGORA
                                         </button>
                                     </div>
                                 </div>
                                 {/* Free Evaluation CTA Section */}
-                                <div className="py-20 px-4 textured-bg">
+                                <div className="py-20 px-4">
                                     <div className="max-w-7xl mx-auto rounded-lg overflow-hidden relative">
                                         <img src="https://placehold.co/1920x600/000000/F80000?text=A+for%C3%A7a+que+te+move" alt="Treinamento com personal" className="absolute inset-0 w-full h-full object-cover opacity-30"/>
                                         <div className="relative p-8 md:p-16 text-center">
                                             <h2 className="text-4xl font-extrabold text-white mb-4">FAÇA SUA AVALIAÇÃO GRÁTIS!</h2>
                                             <p className="text-xl text-gray-200 mb-6">Comece sua jornada fitness com a orientação de um especialista, sem custo!</p>
-                                            <button onClick={() => setShowContactPopup(true)} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">
+                                            <button onClick={() => setPage('contact')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all duration-300 shadow-lg transform hover:scale-110">
                                                 Agendar Agora
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                                 {/* Gallery Section */}
-                                <div className="py-20 px-4 w-full textured-bg">
+                                <div className="py-20 px-4 w-full">
                                     <h2 className="text-4xl font-bold text-center text-red-600 mb-12">Nossa Estrutura e Energia</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Equipamentos" alt="Equipamentos de musculação" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Ambiente+limpo" alt="Ambiente limpo e organizado" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Alunos+treinando" alt="Alunos treinando e se divertindo" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Professores+guiando" alt="Professor guiando um aluno" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Equipamentos" alt="Equipamentos de musculação" className="rounded-lg shadow-lg transition-transform duration-300 transform hover:scale-105 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Ambiente+limpo" alt="Ambiente limpo e organizado" className="rounded-lg shadow-lg transition-transform duration-300 transform hover:scale-105 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Alunos+treinando" alt="Alunos treinando e se divertindo" className="rounded-lg shadow-lg transition-transform duration-300 transform hover:scale-105 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Professores+guiando" alt="Professor guiando um aluno" className="rounded-lg shadow-lg transition-transform duration-300 transform hover:scale-105 object-cover w-full h-full aspect-square"/>
                                     </div>
                                 </div>
                                 {/* Testimonials Section */}
-                                <div className="py-20 px-4 w-full textured-bg">
+                                <div className="py-20 px-4 w-full">
                                     <h2 className="text-4xl font-bold text-center text-red-600 mb-12">O que nossos clientes dizem</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
                                         {testimonials.map((testimonial, index) => (
@@ -238,7 +208,7 @@
                         );
                     case 'about':
                         return (
-                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4 textured-bg">
+                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
                                 <div className="max-w-4xl mx-auto">
                                     <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Quem Somos</h2>
                                     <p className="text-lg leading-relaxed">
@@ -253,7 +223,7 @@
                         );
                     case 'services':
                         return (
-                            <div className="min-h-screen bg-black text-white py-20 px-4 textured-bg">
+                            <div className="min-h-screen bg-black text-white py-20 px-4">
                                 <div className="max-w-4xl mx-auto">
                                     <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Serviços e Modalidades</h2>
                                     <p className="text-lg leading-relaxed">
@@ -261,23 +231,23 @@
                                     </p>
                                     <ul className="mt-6 space-y-4">
                                         <li className="flex items-center text-xl font-medium">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                                            <svg className="h-6 w-6 text-red-500 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                                             Musculação
                                         </li>
                                         <li className="flex items-center text-xl font-medium">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 18a5 5 0 0 1-10 0v-2a5 5 0 0 1 10 0zM12 10a5 5 0 0 1-10 0v-2a5 5 0 0 1 10 0zM13 2a5 5 0 0 1 10 0v-2a5 5 0 0 1-10 0z"></path></svg>
+                                            <svg className="h-6 w-6 text-red-500 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 18a5 5 0 0 1-10 0v-2a5 5 0 0 1 10 0zM12 10a5 5 0 0 1-10 0v-2a5 5 0 0 1 10 0zM13 2a5 5 0 0 1 10 0v-2a5 5 0 0 1-10 0z"></path></svg>
                                             Treino Funcional
                                         </li>
                                         <li className="flex items-center text-xl font-medium">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18L6 12 18 6l-6-6-6 6 12 12z"></path></svg>
+                                            <svg className="h-6 w-6 text-red-500 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18L6 12 18 6l-6-6-6 6 12 12z"></path></svg>
                                             Aulas de Dança
                                         </li>
                                         <li className="flex items-center text-xl font-medium">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 10L14 7L10 11 13 14 17 10zM19 12L12 19"></path></svg>
+                                            <svg className="h-6 w-6 text-red-500 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 10L14 7L10 11 13 14 17 10zM19 12L12 19"></path></svg>
                                             Boxe e Artes Marciais
                                         </li>
                                         <li className="flex items-center text-xl font-medium">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18v-6h-2c0-3.313 2.687-6 6-6s6 2.687 6 6h-2v6c0 1.657 1.343 3 3 3s3-1.343 3-3V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16h-4V8c0-2.209-1.791-4-4-4s-4 1.791-4 4v16H4c-1.105 0-2 0.895-2 2s0.895 2 2 2h20c1.105 0 2-0.895 2-2s-0.895-2-2-2h-2V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16H12c-1.105 0-2-0.895-2-2s0.895-2 2-2h2v-4z"></path></svg>
+                                            <svg className="h-6 w-6 text-red-500 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18v-6h-2c0-3.313 2.687-6 6-6s6 2.687 6 6h-2v6c0 1.657 1.343 3 3 3s3-1.343 3-3V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16h-4V8c0-2.209-1.791-4-4-4s-4 1.791-4 4v16h-4V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16H4c-1.105 0-2 0.895-2 2s0.895 2 2 2h20c1.105 0 2-0.895 2-2s-0.895-2-2-2h-2V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16H12c-1.105 0-2-0.895-2-2s0.895-2 2-2h2v-4z"></path></svg>
                                             Yoga e alongamento
                                         </li>
                                     </ul>
@@ -286,12 +256,12 @@
                         );
                     case 'plans':
                         return (
-                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4 textured-bg">
+                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
                                 <div className="max-w-4xl mx-auto">
                                     <h2 className="text-4xl font-bold title-font text-red-600 mb-6 text-center">Conheça nossos Pacotes</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
                                         {plans.map((plan, index) => (
-                                            <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105">
+                                            <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                                 <h3 className="text-2xl font-bold title-font mb-2">{plan.name}</h3>
                                                 <p className="text-3xl font-extrabold text-red-500 mb-4">{plan.price}</p>
                                                 <ul className="text-sm space-y-2">
@@ -310,11 +280,11 @@
                                                 </button>
                                             </div>
                                         ))}
-                                        <div className="bg-red-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 col-span-1 md:col-span-3 lg:col-span-1 md:mx-auto">
+                                        <div className="bg-red-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 col-span-1 md:col-span-3 lg:col-span-1 md:mx-auto">
                                             <h3 className="text-2xl font-bold title-font mb-2 text-center">Faça a Avaliação</h3>
                                             <p className="text-3xl font-extrabold text-white mb-4 text-center">R$ 29,90</p>
                                             <p className="text-center font-semibold mb-4">Agende já!</p>
-                                            <button onClick={() => setShowContactPopup(true)} className="w-full bg-white text-red-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors">
+                                            <button onClick={() => setPage('contact')} className="w-full bg-white text-red-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors">
                                                 Agendar Avaliação
                                             </button>
                                         </div>
@@ -324,7 +294,7 @@
                         );
                     case 'bmi':
                         return (
-                            <div className="min-h-screen bg-black text-white py-20 px-4 textured-bg">
+                            <div className="min-h-screen bg-black text-white py-20 px-4">
                                 <div className="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
                                     <h2 className="text-4xl font-bold title-font text-center text-red-600 mb-6">Calculadora de IMC</h2>
                                     <div className="space-y-4">
@@ -360,6 +330,22 @@
                                 </div>
                             </div>
                         );
+                    case 'contact':
+                        return (
+                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
+                                <div className="max-w-4xl mx-auto text-center">
+                                    <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Contato</h2>
+                                    <p className="text-lg">Fale com a gente e comece sua jornada fitness!</p>
+                                    <div className="mt-8 space-y-4">
+                                        <p className="text-xl font-semibold">Telefone: (91) 98642-7170</p>
+                                        <p className="text-lg">Endereço: Av. Antônio Lisboa de Silva, Santa Bárbara do Pará</p>
+                                        <a href="https://wa.me/5591986427170" target="_blank" rel="noopener noreferrer" className="inline-block mt-4 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors">
+                                            WhatsApp
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        );
                     default:
                         return null;
                 }
@@ -367,7 +353,7 @@
             
             // This is the single, correct call to render the App component.
             return (
-                <div className="font-sans bg-black">
+                <div className="font-sans">
                     {/* Header */}
                     <header className="fixed top-0 left-0 w-full z-50 bg-black/70 backdrop-blur-sm">
                         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -375,35 +361,35 @@
                                 {/* Logo Placeholder */}
                                 <img src="https://placehold.co/150x50/F80000/FFFFFF?text=Logo+Academia" alt="Logo da Academia Bárbaros" className="h-10 w-auto"/>
                             </div>
-                            <div className="flex items-center">
-                                <div className="hidden md:flex space-x-8 text-sm">
-                                    <button onClick={() => setPage('home')} className={`transition-colors ${page === 'home' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Home</button>
-                                    <button onClick={() => setPage('about')} className={`transition-colors ${page === 'about' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Quem Somos</button>
-                                    <button onClick={() => setPage('services')} className={`transition-colors ${page === 'services' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Serviços</button>
-                                    <button onClick={() => setPage('plans')} className={`transition-colors ${page === 'plans' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Planos</button>
-                                    <button onClick={() => setPage('bmi')} className={`transition-colors ${page === 'bmi' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>IMC</button>
-                                </div>
-                                <button onClick={toggleMobileMenu} className="text-white md:hidden ml-4">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                                </button>
-                                <button onClick={() => setShowContactPopup(true)} className="hidden md:block ml-8 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">
-                                    Contato
-                                </button>
+                            {/* Desktop Menu */}
+                            <div className="hidden md:flex space-x-8 text-sm">
+                                <button onClick={() => { setPage('home'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Home</button>
+                                <button onClick={() => { setPage('about'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Quem Somos</button>
+                                <button onClick={() => { setPage('services'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Serviços</button>
+                                <button onClick={() => { setPage('plans'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Planos</button>
+                                <button onClick={() => { setPage('bmi'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">IMC</button>
+                                <button onClick={() => { setPage('contact'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Contato</button>
                             </div>
+                            {/* Mobile Menu Button */}
+                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white md:hidden focus:outline-none">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                                </svg>
+                            </button>
                         </nav>
-                        {/* Mobile Menu Dropdown */}
-                        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'max-h-96' : 'max-h-0'}`}>
-                            <div className="flex flex-col items-center py-4 space-y-4">
-                                <button onClick={() => { setPage('home'); setIsMobileMenuOpen(false); }} className={`transition-colors ${page === 'home' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Home</button>
-                                <button onClick={() => { setPage('about'); setIsMobileMenuOpen(false); }} className={`transition-colors ${page === 'about' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Quem Somos</button>
-                                <button onClick={() => { setPage('services'); setIsMobileMenuOpen(false); }} className={`transition-colors ${page === 'services' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Serviços</button>
-                                <button onClick={() => { setPage('plans'); setIsMobileMenuOpen(false); }} className={`transition-colors ${page === 'plans' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>Planos</button>
-                                <button onClick={() => { setPage('bmi'); setIsMobileMenuOpen(false); }} className={`transition-colors ${page === 'bmi' ? 'text-red-500 font-bold' : 'text-white hover:text-red-500'}`}>IMC</button>
-                                <button onClick={() => { setShowContactPopup(true); setIsMobileMenuOpen(false); }} className="w-full max-w-[200px] text-center px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">
-                                    Contato
-                                </button>
+                        {/* Mobile Menu */}
+                        {isMenuOpen && (
+                            <div className="md:hidden bg-black/70 backdrop-blur-sm">
+                                <div className="flex flex-col items-center py-4 space-y-4">
+                                    <button onClick={() => { setPage('home'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Home</button>
+                                    <button onClick={() => { setPage('about'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Quem Somos</button>
+                                    <button onClick={() => { setPage('services'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Serviços</button>
+                                    <button onClick={() => { setPage('plans'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Planos</button>
+                                    <button onClick={() => { setPage('bmi'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">IMC</button>
+                                    <button onClick={() => { setPage('contact'); setIsMenuOpen(false); }} className="text-white hover:text-red-500 transition-colors">Contato</button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </header>
                     {/* Page Content, rendered dynamically based on the current page state */}
                     {renderPage()}
@@ -452,41 +438,8 @@
                             </div>
                         </div>
                     )}
-                    {/* Contact Popup for free evaluation */}
-                    {showContactPopup && (
-                        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-                            <div className="bg-gray-900 rounded-lg p-8 max-w-lg w-full shadow-lg relative">
-                                <button onClick={() => setShowContactPopup(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-200 transition-colors">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                </button>
-                                <h2 className="text-3xl font-bold title-font text-center text-red-600 mb-6">Agendar Avaliação Grátis</h2>
-                                <p className="text-center text-gray-400 mb-6">Preencha o formulário para agendar sua avaliação gratuita. Entraremos em contato via WhatsApp!</p>
-                                <form onSubmit={handleContactFormSubmit} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Nome Completo</label>
-                                        <input type="text" name="name" value={contactFormData.name} onChange={handleContactFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Telefone</label>
-                                        <input type="tel" name="phone" value={contactFormData.phone} onChange={handleContactFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">E-mail</label>
-                                        <input type="email" name="email" value={contactFormData.email} onChange={handleContactFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Mensagem (opcional)</label>
-                                        <textarea name="message" value={contactFormData.message} onChange={handleContactFormChange} rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
-                                    </div>
-                                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">
-                                        Enviar para o WhatsApp
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
                     {/* Footer */}
-                    <footer className="bg-gray-800 text-gray-400 py-8 px-4 text-center textured-bg">
+                    <footer className="bg-gray-800 text-gray-400 py-8 px-4 text-center">
                         <div className="max-w-7xl mx-auto">
                             {/* Logo Placeholder */}
                             <img src="https://placehold.co/100x30/F80000/FFFFFF?text=Logo" alt="Logo da Academia Bárbaros" className="mx-auto h-8 mb-4"/>
