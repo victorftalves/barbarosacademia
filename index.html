@@ -132,7 +132,16 @@
                     });
                     return () => unsubscribe();
                 } else {
-                    console.log("Firebase Auth is not ready yet.");
+                    console.error("Firebase Auth is not ready. Retrying...");
+                    // Simple retry logic
+                    const retry = setTimeout(() => {
+                        const unsubscribe = window.onAuthStateChanged(window.auth, (currentUser) => {
+                            setUser(currentUser);
+                            setIsAuthReady(true);
+                        });
+                        return () => unsubscribe();
+                    }, 1000);
+                    return () => clearTimeout(retry);
                 }
             }, []);
 
