@@ -105,18 +105,27 @@ const App = () => {
         switch (page) {
             case 'home':
                 return (
-                    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center pt-20 pb-10 px-4">
-                        <div className="text-center">
-                            <h1 className="text-5xl md:text-7xl font-extrabold title-font text-red-600 mb-4">ACADEMIA BÁRBAROS</h1>
-                            <p className="text-xl md:text-2xl font-medium">A força que te move, o resultado que te transforma.</p>
-                            <button onClick={() => setPage('contact')} className="mt-8 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors">
-                                Fale com a gente
-                            </button>
+                    <div className="bg-black text-white">
+                        {/* Hero Section */}
+                        <div className="relative h-screen bg-cover bg-center" style={{ backgroundImage: "url('https://placehold.co/1920x1080/000000/F80000?text=A+for%C3%A7a+que+te+move')" }}>
+                            <div className="absolute inset-0 bg-black opacity-60"></div>
+                            <div className="relative z-10 flex flex-col items-center justify-center h-full text-center p-4">
+                                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight">
+                                    DISPOSIÇÃO NO TREINO,<br />
+                                    ENERGIA PRO DIA.
+                                </h1>
+                                <p className="text-xl md:text-2xl font-medium text-red-600 mb-8">
+                                    QUEM É BÁRBAROS, SABE.
+                                </p>
+                                <button onClick={() => setPage('plans')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">
+                                    MATRICULE-SE AGORA
+                                </button>
+                            </div>
                         </div>
                         {/* Testimonials Section */}
                         <div className="py-20 px-4 w-full">
                             <h2 className="text-4xl font-bold text-center text-red-600 mb-12">O que nossos clientes dizem</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
                                 {testimonials.map((testimonial, index) => (
                                     <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg">
                                         <p className="text-lg italic text-gray-300 mb-4">"{testimonial.text}"</p>
