@@ -7,8 +7,8 @@
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React, ReactDOM, and Babel for JSX compilation -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
@@ -286,10 +286,8 @@
                         return null;
                 }
             };
-
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
-
+            
+            // The main return for the App component. This is the correct structure.
             return (
                 <div className="font-sans bg-black">
                     {/* Header */}
@@ -314,10 +312,8 @@
                             </div>
                         </nav>
                     </header>
-
-                    {/* Page Content */}
+                    {/* Page Content, rendered dynamically based on the current page state */}
                     {renderPage()}
-
                     {/* Subscription Popup */}
                     {showPopup && (
                         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
@@ -363,7 +359,6 @@
                             </div>
                         </div>
                     )}
-
                     {/* Footer */}
                     <footer className="bg-gray-800 text-gray-400 py-8 px-4 text-center">
                         <div className="max-w-7xl mx-auto">
@@ -377,9 +372,12 @@
                 </div>
             );
         };
-
+        
+        // This is the single, correct call to render the App component.
         const rootElement = document.getElementById('root');
-        ReactDOM.render(<App />, rootElement);
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
+
     </script>
 </body>
 </html>
