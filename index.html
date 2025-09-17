@@ -43,7 +43,7 @@
             window.getDoc = getDoc;
             window.signInAnonymously = signInAnonymously;
             window.signInWithCustomToken = signInWithCustomToken;
-            
+
             const signInUser = async () => {
                 if (initialAuthToken) {
                     try {
@@ -133,15 +133,6 @@
                     return () => unsubscribe();
                 } else {
                     console.error("Firebase Auth is not ready. Retrying...");
-                    // Simple retry logic
-                    const retry = setTimeout(() => {
-                        const unsubscribe = window.onAuthStateChanged(window.auth, (currentUser) => {
-                            setUser(currentUser);
-                            setIsAuthReady(true);
-                        });
-                        return () => unsubscribe();
-                    }, 1000);
-                    return () => clearTimeout(retry);
                 }
             }, []);
 
@@ -252,11 +243,11 @@
                         }
                     }
                 };
-                
+
                 useEffect(() => {
                     if (!user || !isAuthReady || !window.db) return;
                     const userId = user.uid;
-                    
+
                     const fetchData = async () => {
                         await updateAbsences(userId);
                         await getMetrics(userId);
@@ -376,7 +367,7 @@
 
                     const metricsDocRef = window.doc(window.db, `artifacts/${window.__app_id}/users/${userId}/metrics/progress`);
                     const docSnap = await window.getDoc(metricsDocRef);
-                    
+
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         const lastCheckInDate = data.lastCheckInDate ? new Date(data.lastCheckInDate) : null;
@@ -673,7 +664,7 @@
                 </div>
             );
         };
-        
+
         const rootElement = document.getElementById('root');
         const root = ReactDOM.createRoot(rootElement);
         root.render(<App />);
