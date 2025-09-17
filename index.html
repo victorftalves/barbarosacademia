@@ -17,43 +17,35 @@
         import { getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Globals for Firebase setup
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* Your Firebase config here */ };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* Your Firebase config here */ };
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Initialize Firebase
-        window.app = initializeApp(firebaseConfig);
-        window.db = getFirestore(window.app);
-        window.auth = getAuth(window.app);
-        setLogLevel('debug');
+            window.app = initializeApp(firebaseConfig);
+            window.db = getFirestore(window.app);
+            window.auth = getAuth(window.app);
+            setLogLevel('debug');
 
-        // Sign in with custom token or anonymously
-        const signInUser = async () => {
-            if (initialAuthToken) {
-                try {
-                    await signInWithCustomToken(window.auth, initialAuthToken);
-                    console.log("Signed in with custom token.");
-                } catch (error) {
-                    console.error("Error signing in with custom token:", error);
+            const signInUser = async () => {
+                if (initialAuthToken) {
                     try {
+                        await signInWithCustomToken(window.auth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } catch (error) {
+                        console.error("Error signing in with custom token:", error);
                         await signInAnonymously(window.auth);
-                        console.log("Signed in anonymously.");
-                    } catch (anonError) {
-                        console.error("Error signing in anonymously:", anonError);
+                        console.log("Signed in anonymously due to token error.");
                     }
-                }
-            } else {
-                try {
+                } else {
                     await signInAnonymously(window.auth);
                     console.log("Signed in anonymously.");
-                } catch (anonError) {
-                    console.error("Error signing in anonymously:", anonError);
                 }
-            }
-        };
-
-        signInUser();
+            };
+            signInUser();
+        } catch (e) {
+            console.error("Failed to initialize Firebase:", e);
+        }
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
@@ -76,7 +68,9 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root" class="min-h-screen bg-black flex items-center justify-center">
+        <p class="text-white text-lg font-semibold">Carregando...</p>
+    </div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
@@ -121,11 +115,15 @@
             ];
 
             useEffect(() => {
-                const unsubscribe = window.auth.onAuthStateChanged(currentUser => {
-                    setUser(currentUser);
-                    setIsAuthReady(true);
-                });
-                return () => unsubscribe();
+                if (window.auth) {
+                    const unsubscribe = window.auth.onAuthStateChanged(currentUser => {
+                        setUser(currentUser);
+                        setIsAuthReady(true);
+                    });
+                    return () => unsubscribe();
+                } else {
+                    console.error("Firebase Auth is not available.");
+                }
             }, []);
 
             const handleLogout = () => {
@@ -237,7 +235,7 @@
                 };
                 
                 useEffect(() => {
-                    if (!user) return;
+                    if (!user || !isAuthReady || !window.db) return;
                     const userId = user.uid;
                     
                     const fetchData = async () => {
@@ -274,7 +272,7 @@
 
                 const addLog = async (e) => {
                     e.preventDefault();
-                    if (!newLog.trim() || !user) return;
+                    if (!newLog.trim() || !user || !window.db) return;
                     const userId = user.uid;
                     try {
                         const logsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`);
@@ -294,7 +292,7 @@
                 };
 
                 const updateLog = async (logId) => {
-                    if (!editLogText.trim() || !user) return;
+                    if (!editLogText.trim() || !user || !window.db) return;
                     const userId = user.uid;
                     try {
                         const logDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`, logId);
@@ -309,7 +307,7 @@
                 };
 
                 const deleteLog = async (logId) => {
-                    if (!user) return;
+                    if (!user || !window.db) return;
                     const userId = user.uid;
                     try {
                         const logDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`, logId);
@@ -326,7 +324,7 @@
 
                 const addEvaluation = async (e) => {
                     e.preventDefault();
-                    if (!newEvaluation.date || !user) {
+                    if (!newEvaluation.date || !user || !window.db) {
                         console.error("Data da avaliação é obrigatória.");
                         return;
                     }
@@ -341,7 +339,7 @@
                 };
 
                 const deleteEvaluation = async (evalId) => {
-                    if (!user) return;
+                    if (!user || !window.db) return;
                     const userId = user.uid;
                     try {
                         const evalDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`, evalId);
@@ -352,7 +350,7 @@
                 };
 
                 const checkInToday = async () => {
-                    if (!user) return;
+                    if (!user || !window.db) return;
                     const userId = user.uid;
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -394,8 +392,6 @@
                     }
                     getMetrics(userId);
                 };
-
-                if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Carregando dados do aluno...</div>;
 
                 return (
                     <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
@@ -532,10 +528,10 @@
                         return (
                             <div className="bg-black text-white">
                                 <div className="relative h-screen flex flex-col items-center justify-center text-center overflow-hidden">
-                                    <video autoPlay loop muted playsInline className="hero-video">
+                                    <video autoPlay loop muted playsInline className="hero-video" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                                         <source src="https://cdn.pixabay.com/video/2020/03/05/33580-394870503_large.mp4" type="video/mp4" />
-                                        Seu navegador não suporta a tag de vídeo.
                                     </video>
+                                    <div class="hidden absolute inset-0 bg-[url('https://placehold.co/1920x1080/000000/FFFFFF?text=Academia+Barbaros')] bg-cover bg-center"></div>
                                     <div className="absolute inset-0 bg-black opacity-60"></div>
                                     <div className="relative z-10 p-4">
                                         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight">DISPOSIÇÃO NO TREINO,<br />ENERGIA PRO DIA.</h1>
