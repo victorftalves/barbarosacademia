@@ -10,10 +10,61 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Firebase Libraries -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Globals for Firebase setup
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* Your Firebase config here */ };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        window.app = initializeApp(firebaseConfig);
+        window.db = getFirestore(window.app);
+        window.auth = getAuth(window.app);
+        setLogLevel('debug');
+
+        // Auth state listener and initial sign-in
+        onAuthStateChanged(window.auth, (user) => {
+            if (user) {
+                console.log("User is signed in:", user.uid);
+            } else {
+                console.log("User is signed out.");
+            }
+        });
+
+        // Sign in with custom token or anonymously
+        if (initialAuthToken) {
+            signInWithCustomToken(window.auth, initialAuthToken)
+                .then(() => console.log("Signed in with custom token."))
+                .catch(error => {
+                    console.error("Error signing in with custom token:", error);
+                    signInAnonymously(window.auth).then(() => console.log("Signed in anonymously.")).catch(console.error);
+                });
+        } else {
+            signInAnonymously(window.auth).then(() => console.log("Signed in anonymously.")).catch(console.error);
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .hero-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: -1;
+            object-fit: cover;
         }
     </style>
 </head>
@@ -21,15 +72,23 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const motivationalQuotes = [
+            "Acredite em você mesmo e em tudo o que você é. Saiba que há algo dentro de você que é maior do que qualquer obstáculo.",
+            "O sucesso é a soma de pequenos esforços repetidos dia após dia.",
+            "A dor que você sente hoje é a força que você sentirá amanhã.",
+            "Não espere por motivação. Seja a sua própria motivação."
+        ];
+
         // Main App Component
         const App = () => {
-            // State for navigation
-            const [page, setPage] = React.useState('home');
-
-            // State for the subscription popup
-            const [showPopup, setShowPopup] = React.useState(false);
-            const [selectedPlan, setSelectedPlan] = React.useState('');
-            const [formData, setFormData] = React.useState({
+            const [page, setPage] = useState('home');
+            const [user, setUser] = useState(null);
+            const [isAuthReady, setIsAuthReady] = useState(false);
+            const [showPopup, setShowPopup] = useState(false);
+            const [selectedPlan, setSelectedPlan] = useState('');
+            const [formData, setFormData] = useState({
                 name: '',
                 cpf: '',
                 phone: '',
@@ -38,26 +97,38 @@
                 objective: '',
                 address: ''
             });
+            const [weight, setWeight] = useState('');
+            const [height, setHeight] = useState('');
+            const [bmiResult, setBmiResult] = useState(null);
 
-            // Function to handle BMI calculation
-            const [weight, setWeight] = React.useState('');
-            const [height, setHeight] = React.useState('');
-            const [bmiResult, setBmiResult] = React.useState(null);
+            const plans = [
+                { name: 'Pacote Bárbaros', price: 'R$ 99,90/mês', benefits: ['Acesso livre na academia'] },
+                { name: 'Pacote Executivo', price: 'R$ 79,90/mês', benefits: ['Acesso das 10h às 16h'] },
+                { name: 'Pacote Família', price: 'R$ 89,90/mês', benefits: ['A partir de 3 pessoas', 'Acesso completo'] }
+            ];
 
             const testimonials = [
-                {
-                    name: 'Carlos R.',
-                    text: 'A Academia Bárbaros mudou minha vida! A equipe é incrível e me ajudou a alcançar meus objetivos de forma segura e divertida. Recomendo muito!'
-                },
-                {
-                    name: 'Juliana P.',
-                    text: 'O ambiente é sensacional, com equipamentos de última geração e aulas super animadas. Me sinto em casa aqui. O melhor lugar para treinar!'
-                },
-                {
-                    name: 'Márcio S.',
-                    text: 'Os professores são muito atenciosos e preparam treinos personalizados de verdade. Saio daqui cada dia mais motivado. Parabéns, Bárbaros!'
-                }
+                { name: 'Carlos R.', text: 'A Academia Bárbaros mudou minha vida! A equipe é incrível e me ajudou a alcançar meus objetivos de forma segura e divertida. Recomendo muito!' },
+                { name: 'Juliana P.', text: 'O ambiente é sensacional, com equipamentos de última geração e aulas super animadas. Me sinto em casa aqui. O melhor lugar para treinar!' },
+                { name: 'Márcio S.', text: 'Os professores são muito atenciosos e preparam treinos personalizados de verdade. Saio daqui cada dia mais motivado. Parabéns, Bárbaros!' }
             ];
+
+            useEffect(() => {
+                const unsubscribe = window.auth.onAuthStateChanged(currentUser => {
+                    setUser(currentUser);
+                    setIsAuthReady(true);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            const handleLogout = () => {
+                signOut(window.auth).then(() => {
+                    console.log("Usuário desconectado.");
+                    setPage('home');
+                }).catch(error => {
+                    console.error("Erro ao desconectar:", error);
+                });
+            };
 
             const calculateBmi = () => {
                 if (!weight || !height) {
@@ -65,7 +136,7 @@
                     return;
                 }
                 const w = parseFloat(weight);
-                const h = parseFloat(height) / 100; // Convert cm to m
+                const h = parseFloat(height) / 100;
                 if (isNaN(w) || isNaN(h) || h === 0) {
                     setBmiResult('Valores inválidos.');
                     return;
@@ -82,25 +153,14 @@
                 setBmiResult(`Seu IMC é ${bmi.toFixed(2)}. Categoria: ${category}`);
             };
 
-            // Data for plans
-            const plans = [
-                { name: 'Pacote Bárbaros', price: 'R$ 99,90/mês', benefits: ['Acesso livre na academia'] },
-                { name: 'Pacote Executivo', price: 'R$ 79,90/mês', benefits: ['Acesso das 10h às 16h'] },
-                { name: 'Pacote Família', price: 'R$ 89,90/mês', benefits: ['A partir de 3 pessoas', 'Acesso completo'] }
-            ];
-
-            // Handle form changes
             const handleFormChange = (e) => {
                 const { name, value } = e.target;
                 setFormData(prevData => ({ ...prevData, [name]: value }));
             };
 
-            // Handle form submission
             const handleFormSubmit = (e) => {
                 e.preventDefault();
                 const { name, cpf, phone, email, dob, objective, address } = formData;
-
-                // Prepare message for WhatsApp
                 const whatsappMessage = `Olá, gostaria de me matricular no plano *${selectedPlan}*.\n\n` +
                                         `*Dados do cliente:*\n` +
                                         `Nome: ${name}\n` +
@@ -113,191 +173,417 @@
 
                 const encodedMessage = encodeURIComponent(whatsappMessage);
                 const whatsappUrl = `https://wa.me/5591986427170?text=${encodedMessage}`;
-
                 window.open(whatsappUrl, '_blank');
-
-                // Hide popup and reset form
                 setShowPopup(false);
                 setFormData({ name: '', cpf: '', phone: '', email: '', dob: '', objective: '', address: '' });
             };
 
-            // Page content based on state
+            const AlunoArea = ({ user }) => {
+                const [newLog, setNewLog] = useState('');
+                const [logs, setLogs] = useState([]);
+                const [newEvaluation, setNewEvaluation] = useState({
+                    date: '',
+                    weight: '',
+                    bodyFat: '',
+                    measurements: '',
+                    notes: ''
+                });
+                const [evaluations, setEvaluations] = useState([]);
+                const [metrics, setMetrics] = useState({ trainedDays: 0, absences: 0 });
+                const [loading, setLoading] = useState(true);
+                const [editingLogId, setEditingLogId] = useState(null);
+                const [editLogText, setEditLogText] = useState('');
+                const [motivationalQuote, setMotivationalQuote] = useState('');
+
+                useEffect(() => {
+                    setMotivationalQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+                }, []);
+
+                const getMetrics = async (userId) => {
+                    const metricsDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/metrics/progress`);
+                    const metricsDoc = await getDoc(metricsDocRef);
+                    if (metricsDoc.exists()) {
+                        setMetrics(metricsDoc.data());
+                    }
+                };
+
+                const updateAbsences = async (userId) => {
+                    const metricsDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/metrics/progress`);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const docSnap = await getDoc(metricsDocRef);
+                    let lastCheckInDate = docSnap.exists() ? docSnap.data().lastCheckInDate : null;
+
+                    if (lastCheckInDate) {
+                        const lastDate = new Date(lastCheckInDate);
+                        lastDate.setHours(0, 0, 0, 0);
+
+                        const diffTime = today.getTime() - lastDate.getTime();
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (diffDays > 1) {
+                            const newAbsences = metrics.absences + diffDays - 1;
+                            await updateDoc(metricsDocRef, { absences: newAbsences });
+                        }
+                    }
+                };
+                
+                useEffect(() => {
+                    if (!user) return;
+                    const userId = user.uid || crypto.randomUUID();
+                    getMetrics(userId);
+                    updateAbsences(userId);
+
+                    const logsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`);
+                    const logsQuery = query(logsCollectionRef, orderBy('createdAt', 'desc'));
+                    const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+                        const logsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setLogs(logsList);
+                        setLoading(false);
+                    }, (error) => {
+                        console.error("Erro ao buscar logs:", error);
+                        setLoading(false);
+                    });
+
+                    const evaluationsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`);
+                    const evaluationsQuery = query(evaluationsCollectionRef, orderBy('date', 'desc'));
+                    const unsubscribeEvaluations = onSnapshot(evaluationsQuery, (snapshot) => {
+                        const evaluationsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setEvaluations(evaluationsList);
+                    }, (error) => {
+                        console.error("Erro ao buscar avaliações:", error);
+                    });
+
+                    return () => {
+                        unsubscribeLogs();
+                        unsubscribeEvaluations();
+                    };
+                }, [user]);
+
+                const addLog = async (e) => {
+                    e.preventDefault();
+                    if (!newLog.trim() || !user) return;
+                    const userId = user.uid || crypto.randomUUID();
+                    try {
+                        const logsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`);
+                        await addDoc(logsCollectionRef, {
+                            text: newLog,
+                            createdAt: Date.now()
+                        });
+                        setNewLog('');
+                    } catch (error) {
+                        console.error("Erro ao adicionar log:", error);
+                    }
+                };
+
+                const startEdit = (log) => {
+                    setEditingLogId(log.id);
+                    setEditLogText(log.text);
+                };
+
+                const updateLog = async (logId) => {
+                    if (!editLogText.trim() || !user) return;
+                    const userId = user.uid || crypto.randomUUID();
+                    try {
+                        const logDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`, logId);
+                        await updateDoc(logDocRef, {
+                            text: editLogText
+                        });
+                        setEditingLogId(null);
+                        setEditLogText('');
+                    } catch (error) {
+                        console.error("Erro ao atualizar log:", error);
+                    }
+                };
+
+                const deleteLog = async (logId) => {
+                    if (!user) return;
+                    const userId = user.uid || crypto.randomUUID();
+                    try {
+                        const logDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`, logId);
+                        await deleteDoc(logDocRef);
+                    } catch (error) {
+                        console.error("Erro ao deletar log:", error);
+                    }
+                };
+
+                const handleEvaluationChange = (e) => {
+                    const { name, value } = e.target;
+                    setNewEvaluation(prev => ({ ...prev, [name]: value }));
+                };
+
+                const addEvaluation = async (e) => {
+                    e.preventDefault();
+                    if (!newEvaluation.date || !user) {
+                        console.error("Data da avaliação é obrigatória.");
+                        return;
+                    }
+                    const userId = user.uid || crypto.randomUUID();
+                    try {
+                        const evaluationsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`);
+                        await addDoc(evaluationsCollectionRef, newEvaluation);
+                        setNewEvaluation({ date: '', weight: '', bodyFat: '', measurements: '', notes: '' });
+                    } catch (error) {
+                        console.error("Erro ao adicionar avaliação:", error);
+                    }
+                };
+
+                const deleteEvaluation = async (evalId) => {
+                    if (!user) return;
+                    const userId = user.uid || crypto.randomUUID();
+                    try {
+                        const evalDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`, evalId);
+                        await deleteDoc(evalDocRef);
+                    } catch (error) {
+                        console.error("Erro ao deletar avaliação:", error);
+                    }
+                };
+
+                const checkInToday = async () => {
+                    if (!user) return;
+                    const userId = user.uid || crypto.randomUUID();
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const metricsDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/metrics/progress`);
+                    const docSnap = await getDoc(metricsDocRef);
+                    
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const lastCheckInDate = data.lastCheckInDate ? new Date(data.lastCheckInDate) : null;
+                        const lastDateStr = lastCheckInDate ? lastCheckInDate.toISOString().split('T')[0] : null;
+                        const todayStr = today.toISOString().split('T')[0];
+
+                        if (lastDateStr === todayStr) {
+                            console.log("Check-in de hoje já foi feito.");
+                            return;
+                        }
+
+                        let absences = data.absences;
+                        if (lastCheckInDate) {
+                            const diffTime = today.getTime() - lastCheckInDate.getTime();
+                            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays > 1) {
+                                absences += (diffDays - 1);
+                            }
+                        }
+
+                        await updateDoc(metricsDocRef, {
+                            trainedDays: data.trainedDays + 1,
+                            lastCheckInDate: today.getTime(),
+                            absences: absences
+                        });
+                    } else {
+                        await setDoc(metricsDocRef, {
+                            trainedDays: 1,
+                            absences: 0,
+                            lastCheckInDate: today.getTime()
+                        });
+                    }
+                    getMetrics(userId);
+                };
+
+                if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Carregando dados do aluno...</div>;
+
+                return (
+                    <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
+                        <div className="max-w-7xl mx-auto">
+                            <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Área do Aluno</h2>
+                            <p className="text-lg mb-4">Bem-vindo(a) de volta! Seu ID de aluno é: <span className="font-mono bg-gray-800 px-2 py-1 rounded-md text-sm break-all">{user.uid}</span></p>
+
+                            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8 text-center italic text-lg text-gray-400">
+                                <p>"{motivationalQuote}"</p>
+                            </div>
+
+                            {/* Dashboard de Acompanhamento */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+                                <div className="bg-red-600 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
+                                    <h3 className="text-4xl font-extrabold">{metrics.trainedDays}</h3>
+                                    <p className="text-lg font-semibold">DIAS DE TREINO</p>
+                                    <button onClick={checkInToday} className="mt-4 bg-white text-red-600 font-bold py-2 px-4 rounded-full transition-colors hover:bg-gray-200">
+                                        Check-in de Hoje
+                                    </button>
+                                </div>
+                                <div className="bg-gray-700 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
+                                    <h3 className="text-4xl font-extrabold">{metrics.absences}</h3>
+                                    <p className="text-lg font-semibold">FALTAS</p>
+                                </div>
+                                <div className="bg-gray-700 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
+                                    <h3 className="text-4xl font-extrabold">{evaluations.length}</h3>
+                                    <p className="text-lg font-semibold">AVALIAÇÕES</p>
+                                </div>
+                            </div>
+
+                            {/* Diário de Treino */}
+                            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                                <h3 className="text-2xl font-bold mb-4 text-red-600">Diário de Treino</h3>
+                                <form onSubmit={addLog} className="flex flex-col sm:flex-row gap-4 mb-6">
+                                    <input
+                                        type="text"
+                                        value={newLog}
+                                        onChange={(e) => setNewLog(e.target.value)}
+                                        placeholder="Adicionar nova anotação de treino..."
+                                        className="flex-grow px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
+                                    <button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-md transition-colors">
+                                        Adicionar
+                                    </button>
+                                </form>
+                                <div className="space-y-4">
+                                    {logs.length > 0 ? (
+                                        logs.map(log => (
+                                            <div key={log.id} className="bg-gray-700 p-4 rounded-md shadow-md flex justify-between items-center">
+                                                {editingLogId === log.id ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editLogText}
+                                                        onChange={(e) => setEditLogText(e.target.value)}
+                                                        className="flex-grow bg-gray-600 px-2 py-1 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                    />
+                                                ) : (
+                                                    <p className="flex-grow">{log.text}</p>
+                                                )}
+                                                <div className="flex space-x-2 ml-4">
+                                                    {editingLogId === log.id ? (
+                                                        <button onClick={() => updateLog(log.id)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md transition-colors text-sm">Salvar</button>
+                                                    ) : (
+                                                        <button onClick={() => startEdit(log)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md transition-colors text-sm">Editar</button>
+                                                    )}
+                                                    <button onClick={() => deleteLog(log.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition-colors text-sm">Deletar</button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-400 text-center">Nenhuma anotação de treino encontrada. Adicione uma para começar!</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Histórico de Avaliações */}
+                            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+                                <h3 className="text-2xl font-bold mb-4 text-red-600">Histórico de Avaliações</h3>
+                                <form onSubmit={addEvaluation} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Data</label>
+                                        <input type="date" name="date" value={newEvaluation.date} onChange={handleEvaluationChange} required className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Peso (kg)</label>
+                                        <input type="number" step="0.1" name="weight" value={newEvaluation.weight} onChange={handleEvaluationChange} className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Gordura Corporal (%)</label>
+                                        <input type="number" step="0.1" name="bodyFat" value={newEvaluation.bodyFat} onChange={handleEvaluationChange} className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Medidas</label>
+                                        <input type="text" name="measurements" value={newEvaluation.measurements} onChange={handleEvaluationChange} placeholder="Ex: C: 40cm, B: 35cm" className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium mb-1">Observações</label>
+                                        <textarea name="notes" value={newEvaluation.notes} onChange={handleEvaluationChange} rows="3" className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
+                                    </div>
+                                    <button type="submit" className="md:col-span-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-md transition-colors">
+                                        Adicionar Avaliação
+                                    </button>
+                                </form>
+                                <div className="space-y-4 mt-6">
+                                    {evaluations.length > 0 ? (
+                                        evaluations.map(evalItem => (
+                                            <div key={evalItem.id} className="bg-gray-700 p-4 rounded-md shadow-md relative">
+                                                <button onClick={() => deleteEvaluation(evalItem.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors">
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                </button>
+                                                <p className="text-sm text-gray-400">Data: {evalItem.date}</p>
+                                                <p className="mt-1"><span className="font-semibold text-white">Peso:</span> {evalItem.weight} kg</p>
+                                                <p><span className="font-semibold text-white">Gordura Corporal:</span> {evalItem.bodyFat}%</p>
+                                                <p><span className="font-semibold text-white">Medidas:</span> {evalItem.measurements}</p>
+                                                <p><span className="font-semibold text-white">Observações:</span> {evalItem.notes}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-400 text-center">Nenhuma avaliação encontrada. Adicione sua primeira avaliação!</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             const renderPage = () => {
+                if (!isAuthReady) {
+                    return <div className="min-h-screen flex items-center justify-center bg-black text-white">Carregando...</div>;
+                }
                 switch (page) {
                     case 'home':
                         return (
                             <div className="bg-black text-white">
-                                {/* Hero Section */}
-                                <div className="relative h-screen bg-cover bg-center" style={{ backgroundImage: "url('https://placehold.co/1920x1080/000000/F80000?text=A+for%C3%A7a+que+te+move')" }}>
+                                <div className="relative h-screen flex flex-col items-center justify-center text-center overflow-hidden">
+                                    <video autoPlay loop muted playsInline className="hero-video">
+                                        <source src="https://cdn.pixabay.com/video/2020/03/05/33580-394870503_large.mp4" type="video/mp4" />
+                                        Seu navegador não suporta a tag de vídeo.
+                                    </video>
                                     <div className="absolute inset-0 bg-black opacity-60"></div>
-                                    <div className="relative z-10 flex flex-col items-center justify-center h-full text-center p-4">
-                                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight">
-                                            DISPOSIÇÃO NO TREINO,<br />
-                                            ENERGIA PRO DIA.
-                                        </h1>
-                                        <p className="text-xl md:text-2xl font-medium text-red-600 mb-8">
-                                            QUEM É BÁRBAROS, SABE.
-                                        </p>
-                                        <button onClick={() => setPage('plans')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">
-                                            MATRICULE-SE AGORA
-                                        </button>
+                                    <div className="relative z-10 p-4">
+                                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight">DISPOSIÇÃO NO TREINO,<br />ENERGIA PRO DIA.</h1>
+                                        <p className="text-xl md:text-2xl font-medium text-red-600 mb-8">QUEM É BÁRBAROS, SABE.</p>
+                                        <button onClick={() => setPage('plans')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">MATRICULE-SE AGORA</button>
                                     </div>
                                 </div>
-                                {/* Testimonials Section */}
+                                <div className="py-20 px-4">
+                                    <div className="max-w-7xl mx-auto rounded-lg overflow-hidden relative">
+                                        <img src="https://placehold.co/1920x600/000000/F80000?text=A+for%C3%A7a+que+te+move" alt="Treinamento com personal" className="absolute inset-0 w-full h-full object-cover opacity-30"/>
+                                        <div className="relative p-8 md:p-16 text-center">
+                                            <h2 className="text-4xl font-extrabold text-white mb-4">FAÇA SUA AVALIAÇÃO GRÁTIS!</h2>
+                                            <p className="text-xl text-gray-200 mb-6">Comece sua jornada fitness com a orientação de um especialista, sem custo!</p>
+                                            <button onClick={() => setPage('contact')} className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-colors shadow-lg">Agendar Agora</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="py-20 px-4 w-full">
+                                    <h2 className="text-4xl font-bold text-center text-red-600 mb-12">Nossa Estrutura e Energia</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Equipamentos" alt="Equipamentos de musculação" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Ambiente+limpo" alt="Ambiente limpo e organizado" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Alunos+treinando" alt="Alunos treinando e se divertindo" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Professores+guiando" alt="Professor guiando um aluno" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                    </div>
+                                </div>
                                 <div className="py-20 px-4 w-full">
                                     <h2 className="text-4xl font-bold text-center text-red-600 mb-12">O que nossos clientes dizem</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                                        {testimonials.map((testimonial, index) => (
-                                            <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                                                <p className="text-lg italic text-gray-300 mb-4">"{testimonial.text}"</p>
-                                                <p className="font-bold text-right text-white">- {testimonial.name}</p>
-                                            </div>
-                                        ))}
+                                        {testimonials.map((testimonial, index) => (<div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg"><p className="text-lg italic text-gray-300 mb-4">"{testimonial.text}"</p><p className="font-bold text-right text-white">- {testimonial.name}</p></div>))}
                                     </div>
                                 </div>
                             </div>
                         );
                     case 'about':
-                        return (
-                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
-                                <div className="max-w-4xl mx-auto">
-                                    <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Quem Somos</h2>
-                                    <p className="text-lg leading-relaxed">
-                                        A Academia Bárbaros nasceu da paixão pelo esporte e pela vida saudável. Nossa missão é ser a principal referência em bem-estar e performance em Santa Bárbara do Pará. Com equipamentos de ponta e uma equipe de profissionais altamente qualificados, estamos comprometidos em ajudar você a superar seus limites e alcançar seus objetivos de forma segura e eficaz.
-                                    </p>
-                                    <div className="mt-8">
-                                        <h3 className="text-2xl font-semibold mb-4">Nossa Equipe</h3>
-                                        <p>Em breve, fotos e especialidades dos nossos incríveis instrutores.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        );
+                        return (<div className="min-h-screen bg-gray-900 text-white py-20 px-4"><div className="max-w-4xl mx-auto"><h2 className="text-4xl font-bold title-font text-red-600 mb-6">Quem Somos</h2><p className="text-lg leading-relaxed">A Academia Bárbaros nasceu da paixão pelo esporte e pela vida saudável. Nossa missão é ser a principal referência em bem-estar e performance em Santa Bárbara do Pará. Com equipamentos de ponta e uma equipe de profissionais altamente qualificados, estamos comprometidos em ajudar você a superar seus limites e alcançar seus objetivos de forma segura e eficaz.</p><div className="mt-8"><h3 className="text-2xl font-semibold mb-4">Nossa Equipe</h3><p>Em breve, fotos e especialidades dos nossos incríveis instrutores.</p></div></div></div>);
                     case 'services':
-                        return (
-                            <div className="min-h-screen bg-black text-white py-20 px-4">
-                                <div className="max-w-4xl mx-auto">
-                                    <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Serviços e Modalidades</h2>
-                                    <p className="text-lg leading-relaxed">
-                                        Oferecemos uma ampla gama de serviços para atender a todas as suas necessidades de treino. De musculação a aulas de dança, encontre a modalidade perfeita para o seu ritmo.
-                                    </p>
-                                    <ul className="mt-6 space-y-4">
-                                        <li>- Musculação</li>
-                                        <li>- Treino Funcional</li>
-                                        <li>- Aulas de Dança</li>
-                                        <li>- Boxe e Artes Marciais</li>
-                                        <li>- Yoga e alongamento</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        );
+                        return (<div className="min-h-screen bg-black text-white py-20 px-4"><div className="max-w-4xl mx-auto"><h2 className="text-4xl font-bold title-font text-red-600 mb-6">Serviços e Modalidades</h2><p className="text-lg leading-relaxed">Oferecemos uma ampla gama de serviços para atender a todas as suas necessidades de treino. De musculação a aulas de dança, encontre a modalidade perfeita para o seu ritmo.</p><ul className="mt-6 space-y-4"><li className="flex items-center text-xl font-medium"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>Musculação</li><li className="flex items-center text-xl font-medium"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 18a5 5 0 0 1-10 0v-2a5 5 0 0 1 10 0zM12 10a5 5 0 0 1-10 0v-2a5 5 0 0 1 10 0zM13 2a5 5 0 0 1 10 0v-2a5 5 0 0 1-10 0z"></path></svg>Treino Funcional</li><li className="flex items-center text-xl font-medium"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18L6 12 18 6l-6-6-6 6 12 12z"></path></svg>Aulas de Dança</li><li className="flex items-center text-xl font-medium"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 10L14 7L10 11 13 14 17 10zM19 12L12 19"></path></svg>Boxe e Artes Marciais</li><li className="flex items-center text-xl font-medium"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18v-6h-2c0-3.313 2.687-6 6-6s6 2.687 6 6h-2v6c0 1.657 1.343 3 3 3s3-1.343 3-3V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16h-4V8c0-2.209-1.791-4-4-4s-4 1.791-4 4v16h-4V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16H4c-1.105 0-2 0.895-2 2s0.895 2 2 2h20c1.105 0 2-0.895 2-2s-0.895-2-2-2h-2V6c0-2.209-1.791-4-4-4s-4 1.791-4 4v16H12c-1.105 0-2-0.895-2-2s0.895-2 2-2h2v-4z"></path></svg>Yoga e alongamento</li></ul></div></div>);
                     case 'plans':
-                        return (
-                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
-                                <div className="max-w-4xl mx-auto">
-                                    <h2 className="text-4xl font-bold title-font text-red-600 mb-6 text-center">Conheça nossos Pacotes</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
-                                        {plans.map((plan, index) => (
-                                            <div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105">
-                                                <h3 className="text-2xl font-bold title-font mb-2">{plan.name}</h3>
-                                                <p className="text-3xl font-extrabold text-red-500 mb-4">{plan.price}</p>
-                                                <ul className="text-sm space-y-2">
-                                                    {plan.benefits.map((benefit, i) => (
-                                                        <li key={i} className="flex items-center">
-                                                            <svg className="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
-                                                            {benefit}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                                <button onClick={() => {
-                                                    setSelectedPlan(plan.name);
-                                                    setShowPopup(true);
-                                                }} className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full transition-colors">
-                                                    Assinar
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <div className="bg-red-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 col-span-1 md:col-span-3 lg:col-span-1 md:mx-auto">
-                                            <h3 className="text-2xl font-bold title-font mb-2 text-center">Faça a Avaliação</h3>
-                                            <p className="text-3xl font-extrabold text-white mb-4 text-center">R$ 29,90</p>
-                                            <p className="text-center font-semibold mb-4">Agende já!</p>
-                                            <button onClick={() => setPage('contact')} className="w-full bg-white text-red-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors">
-                                                Agendar Avaliação
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
+                        return (<div className="min-h-screen bg-gray-900 text-white py-20 px-4"><div className="max-w-4xl mx-auto"><h2 className="text-4xl font-bold title-font text-red-600 mb-6 text-center">Conheça nossos Pacotes</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">{plans.map((plan, index) => (<div key={index} className="bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105"><h3 className="text-2xl font-bold title-font mb-2">{plan.name}</h3><p className="text-3xl font-extrabold text-red-500 mb-4">{plan.price}</p><ul className="text-sm space-y-2">{plan.benefits.map((benefit, i) => (<li key={i} className="flex items-center"><svg className="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>{benefit}</li>))}</ul><button onClick={() => { setSelectedPlan(plan.name); setShowPopup(true); }} className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-full transition-colors">Assinar</button></div>))}{` `}<div className="bg-red-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:scale-105 col-span-1 md:col-span-3 lg:col-span-1 md:mx-auto"><h3 className="text-2xl font-bold title-font mb-2 text-center">Faça a Avaliação</h3><p className="text-3xl font-extrabold text-white mb-4 text-center">R$ 29,90</p><p className="text-center font-semibold mb-4">Agende já!</p><button onClick={() => setPage('contact')} className="w-full bg-white text-red-600 font-bold py-3 rounded-full hover:bg-gray-200 transition-colors">Agendar Avaliação</button></div></div></div></div>);
                     case 'bmi':
-                        return (
-                            <div className="min-h-screen bg-black text-white py-20 px-4">
-                                <div className="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
-                                    <h2 className="text-4xl font-bold title-font text-center text-red-600 mb-6">Calculadora de IMC</h2>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label htmlFor="weight" className="block text-sm font-medium mb-1">Peso (kg)</label>
-                                            <input
-                                                id="weight"
-                                                type="number"
-                                                value={weight}
-                                                onChange={(e) => setWeight(e.target.value)}
-                                                className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label htmlFor="height" className="block text-sm font-medium mb-1">Altura (cm)</label>
-                                            <input
-                                                id="height"
-                                                type="number"
-                                                value={height}
-                                                onChange={(e) => setHeight(e.target.value)}
-                                                className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                                            />
-                                        </div>
-                                        <button onClick={calculateBmi} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">
-                                            Calcular IMC
-                                        </button>
-                                        {bmiResult && (
-                                            <div className="mt-4 p-4 text-center rounded-md bg-gray-700">
-                                                <p className="text-lg font-bold">{bmiResult}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
+                        return (<div className="min-h-screen bg-black text-white py-20 px-4"><div className="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-xl"><h2 className="text-4xl font-bold title-font text-center text-red-600 mb-6">Calculadora de IMC</h2><div className="space-y-4"><div><label htmlFor="weight" className="block text-sm font-medium mb-1">Peso (kg)</label><input type="number" id="weight" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500" /></div><div><label htmlFor="height" className="block text-sm font-medium mb-1">Altura (cm)</label><input type="number" id="height" value={height} onChange={(e) => setHeight(e.target.value)} className="w-full px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500" /></div><button onClick={calculateBmi} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">Calcular IMC</button>{bmiResult && (<div className="mt-4 p-4 text-center rounded-md bg-gray-700"><p className="text-lg font-bold">{bmiResult}</p></div>)}</div></div></div>);
                     case 'contact':
-                        return (
-                            <div className="min-h-screen bg-gray-900 text-white py-20 px-4">
-                                <div className="max-w-4xl mx-auto text-center">
-                                    <h2 className="text-4xl font-bold title-font text-red-600 mb-6">Contato</h2>
-                                    <p className="text-lg">Fale com a gente e comece sua jornada fitness!</p>
-                                    <div className="mt-8 space-y-4">
-                                        <p className="text-xl font-semibold">Telefone: (91) 98642-7170</p>
-                                        <p className="text-lg">Endereço: Av. Antônio Lisboa de Silva, Santa Bárbara do Pará</p>
-                                        <a href="https://wa.me/5591986427170" target="_blank" rel="noopener noreferrer" className="inline-block mt-4 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors">
-                                            WhatsApp
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        );
+                        return (<div className="min-h-screen bg-gray-900 text-white py-20 px-4"><div className="max-w-4xl mx-auto text-center"><h2 className="text-4xl font-bold title-font text-red-600 mb-6">Contato</h2><p className="text-lg">Fale com a gente e comece sua jornada fitness!</p><div className="mt-8 space-y-4"><p className="text-xl font-semibold">Telefone: (91) 98642-7170</p><p className="text-lg">Endereço: Av. Antônio Lisboa de Silva, Santa Bárbara do Pará</p><a href="https://wa.me/5591986427170" target="_blank" rel="noopener noreferrer" className="inline-block mt-4 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors">WhatsApp</a></div></div></div>);
+                    case 'aluno':
+                        return <AlunoArea user={user} />;
                     default:
                         return null;
                 }
             };
-            
-            // The main return for the App component. This is the correct structure.
+
             return (
                 <div className="font-sans bg-black">
-                    {/* Header */}
                     <header className="fixed top-0 left-0 w-full z-50 bg-black/70 backdrop-blur-sm">
                         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
                             <div className="flex items-center">
-                                {/* Logo Placeholder */}
                                 <img src="https://placehold.co/150x50/F80000/FFFFFF?text=Logo+Academia" alt="Logo da Academia Bárbaros" className="h-10 w-auto"/>
                             </div>
-                            <div className="flex items-center">
+                            <div className="flex items-center space-x-4">
                                 <div className="hidden md:flex space-x-8 text-sm">
                                     <button onClick={() => setPage('home')} className="text-white hover:text-red-500 transition-colors">Home</button>
                                     <button onClick={() => setPage('about')} className="text-white hover:text-red-500 transition-colors">Quem Somos</button>
@@ -305,16 +591,18 @@
                                     <button onClick={() => setPage('plans')} className="text-white hover:text-red-500 transition-colors">Planos</button>
                                     <button onClick={() => setPage('bmi')} className="text-white hover:text-red-500 transition-colors">IMC</button>
                                     <button onClick={() => setPage('contact')} className="text-white hover:text-red-500 transition-colors">Contato</button>
+                                    <button onClick={() => setPage('aluno')} className="text-white hover:text-red-500 transition-colors">Área do Aluno</button>
                                 </div>
+                                {user && (
+                                    <button onClick={handleLogout} className="bg-white text-red-600 px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors text-sm">Sair</button>
+                                )}
                                 <button className="text-white md:hidden">
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                                 </button>
                             </div>
                         </nav>
                     </header>
-                    {/* Page Content, rendered dynamically based on the current page state */}
                     {renderPage()}
-                    {/* Subscription Popup */}
                     {showPopup && (
                         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
                             <div className="bg-gray-900 rounded-lg p-8 max-w-lg w-full shadow-lg relative">
@@ -324,45 +612,20 @@
                                 <h2 className="text-3xl font-bold title-font text-center text-red-600 mb-6">Matricule-se Agora</h2>
                                 <p className="text-center text-gray-400 mb-6">Você está assinando o plano: <span className="text-white font-bold">{selectedPlan}</span></p>
                                 <form onSubmit={handleFormSubmit} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Nome Completo</label>
-                                        <input type="text" name="name" value={formData.name} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">CPF</label>
-                                        <input type="text" name="cpf" value={formData.cpf} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Telefone</label>
-                                        <input type="tel" name="phone" value={formData.phone} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">E-mail</label>
-                                        <input type="email" name="email" value={formData.email} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Data de Nascimento</label>
-                                        <input type="date" name="dob" value={formData.dob} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Objetivo Fitness</label>
-                                        <textarea name="objective" value={formData.objective} onChange={handleFormChange} required rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Endereço Completo</label>
-                                        <textarea name="address" value={formData.address} onChange={handleFormChange} required rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
-                                    </div>
-                                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">
-                                        Enviar para o WhatsApp
-                                    </button>
+                                    <div><label className="block text-sm font-medium mb-1">Nome Completo</label><input type="text" name="name" value={formData.name} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/></div>
+                                    <div><label className="block text-sm font-medium mb-1">CPF</label><input type="text" name="cpf" value={formData.cpf} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/></div>
+                                    <div><label className="block text-sm font-medium mb-1">Telefone</label><input type="tel" name="phone" value={formData.phone} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/></div>
+                                    <div><label className="block text-sm font-medium mb-1">E-mail</label><input type="email" name="email" value={formData.email} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/></div>
+                                    <div><label className="block text-sm font-medium mb-1">Data de Nascimento</label><input type="date" name="dob" value={formData.dob} onChange={handleFormChange} required className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500"/></div>
+                                    <div><label className="block text-sm font-medium mb-1">Objetivo Fitness</label><textarea name="objective" value={formData.objective} onChange={handleFormChange} required rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea></div>
+                                    <div><label className="block text-sm font-medium mb-1">Endereço Completo</label><textarea name="address" value={formData.address} onChange={handleFormChange} required rows="3" className="w-full px-4 py-2 rounded-md bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea></div>
+                                    <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-md transition-colors">Enviar para o WhatsApp</button>
                                 </form>
                             </div>
                         </div>
                     )}
-                    {/* Footer */}
                     <footer className="bg-gray-800 text-gray-400 py-8 px-4 text-center">
                         <div className="max-w-7xl mx-auto">
-                            {/* Logo Placeholder */}
                             <img src="https://placehold.co/100x30/F80000/FFFFFF?text=Logo" alt="Logo da Academia Bárbaros" className="mx-auto h-8 mb-4"/>
                             <p>Academia Bárbaros - Todos os direitos reservados.</p>
                             <p className="mt-2">Endereço: Av. Antônio Lisboa de Silva, Santa Bárbara do Pará</p>
@@ -373,11 +636,9 @@
             );
         };
         
-        // This is the single, correct call to render the App component.
         const rootElement = document.getElementById('root');
         const root = ReactDOM.createRoot(rootElement);
         root.render(<App />);
-
     </script>
 </body>
 </html>
