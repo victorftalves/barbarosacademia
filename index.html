@@ -71,17 +71,6 @@
             overflow-x: hidden;
             background-color: #000;
         }
-        .hero-video {
-            position: absolute;
-            top: 0;
-            left: 0;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: auto;
-            z-index: -1;
-            object-fit: cover;
-        }
     </style>
 </head>
 <body>
@@ -548,12 +537,11 @@
                     case 'home':
                         return (
                             <div className="bg-black text-white">
-                                <div className="relative h-screen flex flex-col items-center justify-center text-center overflow-hidden">
-                                    <video autoPlay loop muted playsInline className="hero-video" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div className="relative h-screen flex flex-col items-center justify-center text-center overflow-hidden bg-[url('https://placehold.co/1920x1080/000000/F80000?text=Academia+Barbaros')] bg-cover bg-center">
+                                    <video autoPlay loop muted playsInline className="absolute top-0 left-0 min-w-full min-h-full w-auto h-auto z-0 object-cover">
                                         <source src="https://cdn.pixabay.com/video/2020/03/05/33580-394870503_large.mp4" type="video/mp4" />
                                     </video>
-                                    <div className="hidden absolute inset-0 bg-[url('https://placehold.co/1920x1080/000000/FFFFFF?text=Academia+Barbaros')] bg-cover bg-center"></div>
-                                    <div className="absolute inset-0 bg-black opacity-60"></div>
+                                    <div className="absolute inset-0 bg-black opacity-60 z-0"></div>
                                     <div className="relative z-10 p-4">
                                         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight">DISPOSIÇÃO NO TREINO,<br />ENERGIA PRO DIA.</h1>
                                         <p className="text-xl md:text-2xl font-medium text-red-600 mb-8">QUEM É BÁRBAROS, SABE.</p>
@@ -562,7 +550,7 @@
                                 </div>
                                 <div className="py-20 px-4">
                                     <div className="max-w-7xl mx-auto rounded-lg overflow-hidden relative">
-                                        <img src="https://placehold.co/1920x600/000000/F80000?text=A+for%C3%A7a+que+te+move" alt="Treinamento com personal" className="absolute inset-0 w-full h-full object-cover opacity-30"/>
+                                        <img src="AVALIAÇÃO-GRÁTIS.jpg" alt="Avaliação Grátis" className="absolute inset-0 w-full h-full object-cover opacity-30"/>
                                         <div className="relative p-8 md:p-16 text-center">
                                             <h2 className="text-4xl font-extrabold text-white mb-4">FAÇA SUA AVALIAÇÃO GRÁTIS!</h2>
                                             <p className="text-xl text-gray-200 mb-6">Comece sua jornada fitness com a orientação de um especialista, sem custo!</p>
@@ -573,10 +561,10 @@
                                 <div className="py-20 px-4 w-full">
                                     <h2 className="text-4xl font-bold text-center text-red-600 mb-12">Nossa Estrutura e Energia</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Equipamentos" alt="Equipamentos de musculação" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Ambiente+limpo" alt="Ambiente limpo e organizado" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Alunos+treinando" alt="Alunos treinando e se divertindo" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
-                                        <img src="https://placehold.co/600x400/1e293b/FFFFFF?text=Professores+guiando" alt="Professor guiando um aluno" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="image_33472d.jpg" alt="Equipamentos de musculação" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="image_33c382.jpg" alt="Ambiente limpo e organizado" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="image_33cb27.jpg" alt="Alunos treinando e se divertindo" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
+                                        <img src="WhatsApp Image 2025-09-17 at 12.23.25.jpg" alt="Professor guiando um aluno" className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300 object-cover w-full h-full aspect-square"/>
                                     </div>
                                 </div>
                                 <div className="py-20 px-4 w-full">
