@@ -28,32 +28,39 @@
         window.auth = getAuth(window.app);
         setLogLevel('debug');
 
-        // Auth state listener and initial sign-in
-        onAuthStateChanged(window.auth, (user) => {
-            if (user) {
-                console.log("User is signed in:", user.uid);
-            } else {
-                console.log("User is signed out.");
-            }
-        });
-
         // Sign in with custom token or anonymously
-        if (initialAuthToken) {
-            signInWithCustomToken(window.auth, initialAuthToken)
-                .then(() => console.log("Signed in with custom token."))
-                .catch(error => {
+        const signInUser = async () => {
+            if (initialAuthToken) {
+                try {
+                    await signInWithCustomToken(window.auth, initialAuthToken);
+                    console.log("Signed in with custom token.");
+                } catch (error) {
                     console.error("Error signing in with custom token:", error);
-                    signInAnonymously(window.auth).then(() => console.log("Signed in anonymously.")).catch(console.error);
-                });
-        } else {
-            signInAnonymously(window.auth).then(() => console.log("Signed in anonymously.")).catch(console.error);
-        }
+                    try {
+                        await signInAnonymously(window.auth);
+                        console.log("Signed in anonymously.");
+                    } catch (anonError) {
+                        console.error("Error signing in anonymously:", anonError);
+                    }
+                }
+            } else {
+                try {
+                    await signInAnonymously(window.auth);
+                    console.log("Signed in anonymously.");
+                } catch (anonError) {
+                    console.error("Error signing in anonymously:", anonError);
+                }
+            }
+        };
+
+        signInUser();
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
+            background-color: #000;
         }
         .hero-video {
             position: absolute;
@@ -68,7 +75,7 @@
         }
     </style>
 </head>
-<body class="bg-black text-white">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -123,10 +130,10 @@
 
             const handleLogout = () => {
                 signOut(window.auth).then(() => {
-                    console.log("Usuário desconectado.");
+                    console.log("User signed out.");
                     setPage('home');
                 }).catch(error => {
-                    console.error("Erro ao desconectar:", error);
+                    console.error("Error signing out:", error);
                 });
             };
 
@@ -231,19 +238,23 @@
                 
                 useEffect(() => {
                     if (!user) return;
-                    const userId = user.uid || crypto.randomUUID();
-                    getMetrics(userId);
-                    updateAbsences(userId);
+                    const userId = user.uid;
+                    
+                    const fetchData = async () => {
+                        await updateAbsences(userId);
+                        await getMetrics(userId);
+                        setLoading(false);
+                    };
+
+                    fetchData();
 
                     const logsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`);
                     const logsQuery = query(logsCollectionRef, orderBy('createdAt', 'desc'));
                     const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
                         const logsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         setLogs(logsList);
-                        setLoading(false);
                     }, (error) => {
                         console.error("Erro ao buscar logs:", error);
-                        setLoading(false);
                     });
 
                     const evaluationsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`);
@@ -259,12 +270,12 @@
                         unsubscribeLogs();
                         unsubscribeEvaluations();
                     };
-                }, [user]);
+                }, [user, isAuthReady]);
 
                 const addLog = async (e) => {
                     e.preventDefault();
                     if (!newLog.trim() || !user) return;
-                    const userId = user.uid || crypto.randomUUID();
+                    const userId = user.uid;
                     try {
                         const logsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`);
                         await addDoc(logsCollectionRef, {
@@ -284,7 +295,7 @@
 
                 const updateLog = async (logId) => {
                     if (!editLogText.trim() || !user) return;
-                    const userId = user.uid || crypto.randomUUID();
+                    const userId = user.uid;
                     try {
                         const logDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`, logId);
                         await updateDoc(logDocRef, {
@@ -299,7 +310,7 @@
 
                 const deleteLog = async (logId) => {
                     if (!user) return;
-                    const userId = user.uid || crypto.randomUUID();
+                    const userId = user.uid;
                     try {
                         const logDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/progress_logs`, logId);
                         await deleteDoc(logDocRef);
@@ -319,7 +330,7 @@
                         console.error("Data da avaliação é obrigatória.");
                         return;
                     }
-                    const userId = user.uid || crypto.randomUUID();
+                    const userId = user.uid;
                     try {
                         const evaluationsCollectionRef = collection(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`);
                         await addDoc(evaluationsCollectionRef, newEvaluation);
@@ -331,7 +342,7 @@
 
                 const deleteEvaluation = async (evalId) => {
                     if (!user) return;
-                    const userId = user.uid || crypto.randomUUID();
+                    const userId = user.uid;
                     try {
                         const evalDocRef = doc(window.db, `artifacts/${window.__app_id}/users/${userId}/evaluations`, evalId);
                         await deleteDoc(evalDocRef);
@@ -342,7 +353,7 @@
 
                 const checkInToday = async () => {
                     if (!user) return;
-                    const userId = user.uid || crypto.randomUUID();
+                    const userId = user.uid;
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
