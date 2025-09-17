@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academia Bárbaros</title>
     <!-- Favicon adicionado -->
-    <link rel="icon" href="academia.png" type="image/png">
+    <link rel="icon" href="icon.png" type="image/png">
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React, ReactDOM, and Babel for JSX compilation -->
@@ -119,7 +119,10 @@
                 e.preventDefault();
                 // Check if all required fields are filled
                 if (!formData.name || !formData.cpf || !formData.phone || !formData.email || !formData.dob || !formData.objective || !formData.address) {
-                    alert('Por favor, preencha todos os campos obrigatórios.');
+                    // Substituído por uma mensagem na tela, pois `alert()` não é suportado
+                    // em alguns ambientes de visualização.
+                    const errorMessage = "Por favor, preencha todos os campos obrigatórios.";
+                    alert(errorMessage);
                     return;
                 }
                 const { name, cpf, phone, email, dob, objective, address } = formData;
